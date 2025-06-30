@@ -1,2 +1,2 @@
 # Game2-GitHub
-150 simple levels
+150 easy levels
