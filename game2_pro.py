@@ -1,14 +1,17 @@
+record, hard_record_int = 1, 0
 import pygame
 from pygame.math import Vector2
-
+from random import randint
+import sys
 pygame.init()
 wikno = (500,500)
 window = pygame.display.set_mode(wikno)
-COLOR=(150,150,255) 
+COLOR=(150,150,255)
 window.fill(COLOR)
 clock = pygame.time.Clock()
 program_work = True
-pygame.display.set_caption("Game 2 (simple)")
+pygame.display.set_caption("Game 2 (pro)")
+#pygame.display.set_mode(wikno, pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN) ### ЕКСПЕРМЕНТ!
 
 class Knopka2():
     def __init__(self, x:int, y:int, x_p:int, y_p:int, ko:tuple[int, int, int] = (0,0,0)):
@@ -22,7 +25,44 @@ class Knopka2():
     def g(self, enemy) -> bool: # check colision
         return pygame.Rect(self.x, self.y, self.x_p, self.y_p).colliderect(pygame.Rect(enemy.x, enemy.y, enemy.x_p, enemy.y_p))
 
-riwni1 = [[]
+class Knopka():
+    def __init__(self, x, y, size, ko, text):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.ko = ko  # колір
+        self.text = text
+        self.text_size = int( self.size * 2.5 / len(self.text) )
+        self.font1 = pygame.font.Font(None, self.text_size).render(self.text, True, (0,0,0))
+    def f(self):
+        pygame.draw.rect(window, self.ko, pygame.Rect(self.x, self.y, self.size, self.size))
+        window.blit(self.font1, (self.x, self.y + self.size/2 - self.text_size/3))
+    def g(self):
+        return pygame.Rect(self.x, self.y, self.size, self.size).colliderect(pygame.Rect(mouse_pos[0], mouse_pos[1], 1, 1))
+
+class Info():
+    def __init__(self, x, y, size, ko, text):
+        self.x = x
+        self.y = y
+        self.text = text
+        if not '\n' in self.text:
+            self.plural = False
+            self.font1 = pygame.font.Font(None, size).render(self.text, True, ko)
+        else:
+            self.plural = True
+            self.fonts = []
+            for t in self.text.split('\n'):
+                self.fonts.append(pygame.font.Font(None, size).render(t, True, ko))
+    def f(self):
+        if self.plural:
+            y = self.y
+            for font in self.fonts:
+                window.blit(font, (self.x, y))
+                y += 50
+        else:
+            window.blit(self.font1, (self.x, self.y))
+
+riwni1 = [ []
 , # 1
 [ [], [[60, 280, 160, 160 ]], [[280, 60, 160, 160 ]] ]
 , # 2
@@ -326,8 +366,24 @@ riwni1 = [[]
 , # The End
  ]
 
+
+with open(__file__, 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+
+def save_progres():
+    lines[0] = f"record, hard_record_int = {str(record)}, {str(hard_record_int)}\n"
+    with open(__file__, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+
+# strs1 = [
+# ['',''],
+# [''],
+# [],
+# ]
+
 mysha=Knopka2(10,10,1,1,(0,0,0))
-def game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]]):
+def game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]],is_start=False):
+    start = is_start
     knopky1 = [[Knopka2(0,0,10,500), Knopka2(0, 0, 500, 10), Knopka2(490, 0, 10, 500), Knopka2(0, 490, 500, 10)],[],[]]
     for i in lvl1[0]:
         stina = Knopka2(i[0],i[1],i[2],i[3],(0,0,0))
@@ -343,7 +399,7 @@ def game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]]):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return True
+                sys.exit()
         window.fill(COLOR)
         old_position = Vector2(mysha.x, mysha.y)
         mysha.x, mysha.y = pygame.mouse.get_pos()
@@ -351,14 +407,19 @@ def game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]]):
         movement_line = (old_position, new_position)
         for i in knopky1[0]:
             i.f()
-            if pygame.Rect(i.x,i.y,i.x_p,i.y_p).clipline(movement_line):
+            if pygame.Rect(i.x, i.y, i.x_p, i.y_p).clipline(movement_line) or start == True:
+                start = False
                 a = True
+                exit_level_rect = Knopka2(0, 0, 31, 9, (200, 50, 50))
+                exit_level_text = Info(0, 0, 15,(255, 255, 255), 'Вийти')
                 while a == True:
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             pygame.quit()
-                            return True
+                            sys.exit()
                     window.fill(COLOR)
+                    exit_level_rect.f()
+                    exit_level_text.f()
                     for i in knopky1[1]:
                         i.f()
                         mysha.x, mysha.y = pygame.mouse.get_pos()
@@ -368,22 +429,595 @@ def game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]]):
                             mysha.x, mysha.y = pygame.mouse.get_pos()
                             new_position = Vector2(mysha.x, mysha.y )
                             movement_line = (old_position, new_position)
-                    clock.tick(60)
-                    pygame.display.update()
+                        elif mysha.g(exit_level_rect):
+                            confirm_yes = Knopka(100, 200, 100, (250, 255, 250), ' Так ')
+                            confirm_no  = Knopka(300, 200, 100, (255, 250, 250), ' Ні ' )
+                            window.fill(COLOR)
+                            confirm_yes.f()
+                            confirm_no.f()
+                            Info(30,100,50,(0,0,0),'Справді хочеш вийти?').f()
+                            confirm = True
+                            while confirm:
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                for event in pygame.event.get():
+                                    if event.type == pygame.QUIT:
+                                        pygame.quit()
+                                        sys.exit()
+                                if confirm_yes.g():
+                                    return True
+                                if confirm_no.g():
+                                    confirm = False
+
+                                update()
+
+                    update()
         for i in knopky1[2]:
             i.f()
             if pygame.Rect(i.x,i.y,i.x_p,i.y_p).clipline(movement_line):
                 lvl_work = False
-        pygame.display.update()
-        clock.tick(60)
+        update()
+
     return False
 
-r_8 = 0
-for i in range(len(riwni1) - 1):
-    r_8 += 1
-    print(r_8)
-    if game(riwni1[r_8]):
-        r_8 = 200
-        break
-if r_8 <= 150:
-    print('\n:D')
+def hard_game(lvl1=[[12,12,12,12],[23,23,23,23],[43,43,43,43]]):
+    knopky1 = [[Knopka2(0,0,10,500), Knopka2(0, 0, 500, 10), Knopka2(490, 0, 10, 500), Knopka2(0, 490, 500, 10)],[],[]]
+    for i in lvl1[0]:
+        stina = Knopka2(i[0],i[1],i[2],i[3],(0,0,0))
+        knopky1[0].append(stina)
+    for i in lvl1[2]:
+        stina = Knopka2(i[0],i[1],i[2],i[3],(250,80,80))
+        knopky1[2].append(stina)
+    mysha.x, mysha.y = pygame.mouse.get_pos()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        window.fill(COLOR)
+        old_position = Vector2(mysha.x, mysha.y)
+        mysha.x, mysha.y = pygame.mouse.get_pos()
+        new_position = Vector2(mysha.x, mysha.y)
+        movement_line = (old_position, new_position)
+        for i in knopky1[0]:
+            i.f()
+            if pygame.Rect(i.x, i.y, i.x_p, i.y_p).clipline(movement_line):
+                return True
+        for i in knopky1[2]:
+            i.f()
+            if pygame.Rect(i.x,i.y,i.x_p,i.y_p).clipline(movement_line):
+                return False
+        update()
+
+def update(fps:int=700):
+    pygame.display.update()
+    clock.tick(fps)
+
+def create_level():
+    p1 = Knopka2 (0,0,0,0,(100,100,100))
+    a1 = 0
+    a2 = 0
+    p1.x   = 500
+    p1.y   = 500
+    p1.x_p = 0
+    p1.y_p = 0 
+    walls = [[0, 0, 10, 500], [0, 0, 500, 10], [490, 0, 10, 500], [0, 490, 500, 10]]
+    starts = []
+    ends = []
+    a = 0
+    c = True
+    c2= True
+    creator_work = True
+    while creator_work:
+        window.fill(COLOR)
+        x_pos, y_pos = pygame.mouse.get_pos()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        c = True
+        for i in walls:
+            p = Knopka2 (i[0],i[1],i[2],i[3],(0,0,0))
+            p.f()
+            if [ p1.x , p1.y , p1.x_p , p1.y_p ] == i:
+                c = False
+        for i in starts:
+            p = Knopka2 (i[0],i[1],i[2],i[3],(10,250,10))
+            p.f()
+            if [ p1.x , p1.y , p1.x_p , p1.y_p ] == i:
+                c = False
+        for i in ends:
+            p = Knopka2 (i[0],i[1],i[2],i[3],(250,10,10))
+            p.f()
+            if [ p1.x , p1.y , p1.x_p , p1.y_p ] == i:
+                c = False
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            creator_work = False
+        if keys[pygame.K_1]:
+            a = 1
+            p1.ko = (40,40,40)
+        if keys[pygame.K_2]:
+            a = 2
+            p1.ko = (40,205,40)
+        if keys[pygame.K_3]:
+            a = 3
+            p1.ko = (205,40,40)
+        if keys[pygame.K_LEFT]:
+            a1 = x_pos
+            a2 = y_pos
+            c = True
+        if a1 - x_pos < 0:
+            p1.x = a1
+            p1.x_p = x_pos - a1
+        else:
+            p1.x = x_pos
+            p1.x_p = a1 - x_pos
+        if a2 - y_pos < 0:
+            p1.y = a2
+            p1.y_p = y_pos - a2
+        else:
+            p1.y = y_pos
+            p1.y_p = a2 - y_pos
+        if keys[pygame.K_RIGHT]:
+            if c == True:
+                if a == 1:
+                    walls.append( [ p1.x , p1.y , p1.x_p , p1.y_p ] )
+                if a == 2:
+                    starts.append( [ p1.x , p1.y , p1.x_p , p1.y_p ] )
+                if a == 3:
+                    ends.append( [ p1.x , p1.y , p1.x_p , p1.y_p ] )
+        try:
+            if keys[pygame.K_LCTRL] and keys[pygame.K_z] and c2 == True:
+                if a == 1:
+                    walls.remove( walls[len(walls) - 1] )
+                if a == 2:
+                    starts.remove( starts[len(starts) - 1] )
+                if a == 3:
+                    ends.remove( ends[len(ends) - 1] )
+                c2 = False
+            if not keys[pygame.K_z]:
+                c2 = True
+            p1.f()
+        except: pass
+
+        pygame.display.update()
+        clock.tick(60)
+    riwni2.append( [ walls, starts, ends ])
+
+campaign_play_text = '  Поїхали!'
+hard_record_str = ''
+riwni2 = [[':O']]
+play_size = 100
+# hmm = 0
+
+play = Knopka(500//2-play_size/2,500//2-play_size/2,play_size,(255,255,255),"Грати")
+out = Knopka(420,20,60,(255,255,255),"Вийти")
+
+# lang = Info(5,350,40,(0,0,0), "Мова")
+# ua = Knopka(10, 390, 80, (255, 255, 255), 'Українська')
+# eng = Knopka(100, 390, 80, (255, 255, 255), 'English')
+
+mouse_pos = [0,0]
+program_work = True
+while program_work:
+    window.fill(COLOR)
+    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+    keys = pygame.key.get_pressed()
+    mouse_keys = pygame.mouse.get_pressed()
+    if out.g():
+        pygame.quit()
+    else:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+    
+    # ua.f()
+    # eng.f()
+    # lang.f()
+    out.f()
+    play.f()
+
+    # if ua.g():
+    #     hmm = 0
+    # if eng.g():
+    #     hmm = 1
+
+    if play.g():
+        play_b = True
+        back = Knopka(5, 5, 50, (255, 255, 255), ' Назад')
+
+        campaign = Knopka(60, 60, 100, (255, 255, 255), '  Кампанія')
+        hardcore = Knopka(60, 340, 100, (255, 255, 255), '  Хардкор ')
+        redactor = Knopka(340, 60, 100, (255, 255, 255), ' Редактор ')
+        random = Knopka(340, 340, 100, (255, 255, 255), '   Випадковий')
+
+        while play_b:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    pygame.quit()
+            window.fill(COLOR)
+            mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+
+            campaign.f()
+            if campaign.g():
+                campaign_b = True
+                campaign_i = Info(20, 65, 52, (0, 0, 0), '''
+Кампанія - проходьте всі 
+{0} рівнів по порядку.
+
+Прогрес зберігається: {1}
+'''.format(str(len(riwni1)-1), str(record)))
+                campaign_back = Knopka(445, 5, 50, (255, 255, 255), ' Назад')
+                campaign_play = Knopka(100, 340, 100, (55, 255, 55), campaign_play_text)
+                campaign_newgame = Knopka(300, 340, 100, (255, 55, 55), ' Заново')
+                while campaign_b:
+                    window.fill(COLOR)
+                    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                    for ev in pygame.event.get():
+                        if ev.type == pygame.QUIT:
+                            pygame.quit() 
+                    
+                    campaign_i.f()
+                    campaign_back.f()
+                    if campaign_back.g():
+                        campaign_b = False
+
+                    if record != 1:
+                        campaign_newgame.f()
+                        if campaign_newgame.g():
+                            confirm_yes = Knopka(100, 200, 100, (250, 255, 250), ' Так ')
+                            confirm_no  = Knopka(300, 200, 100, (255, 250, 250), ' Ні ' )
+                            window.fill(COLOR)
+                            confirm_yes.f()
+                            confirm_no.f()
+                            Info(30, 100, 50, (0, 0, 0), 'Справді хочеш \nпочати нову гру?').f()
+                            confirm = True
+                            while confirm:
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                for event in pygame.event.get():
+                                    if event.type == pygame.QUIT:
+                                        pygame.quit()
+
+                                if confirm_yes.g():
+                                    record = 1
+                                    save_progres()
+                                    campaign_i = Info(20, 65, 52, (0, 0, 0), '''
+Кампанія - проходьте всі 
+{0} рівнів по порядку.
+
+Прогрес зберігається: {1}
+'''.format(str(len(riwni1)-1), str(record)))
+                                    # for _ in range(len(riwni1) - 1):
+                                    #     if game(riwni1[record], i):
+                                    #         break
+                                    #     record += 1
+                                    confirm = False
+
+                                if confirm_no.g():
+                                    confirm = False
+
+                                update()
+
+                    campaign_play.f()
+                    if campaign_play.g():
+                        i = True
+                        for _ in range(len(riwni1) - record):
+                            if game(riwni1[record], i):
+                                break
+                            i = False
+                            record += 1
+                            save_progres()
+                        if record != 1:
+                            campaign_play_text = " Продовжити  "
+                            campaign_play = Knopka(100, 340, 100, (55, 255, 55), campaign_play_text)
+                            campaign_i = Info(20, 65, 52, (0, 0, 0), '''
+Кампанія - проходьте всі 
+{0} рівнів по порядку.
+
+Прогрес зберігається: {1}
+'''.format(str(len(riwni1)-1), str(record)))
+
+                    update()
+            hardcore.f()
+            if hardcore.g():
+                hardcore_b = True
+                hardcore_i = Info(20, 65, 50, (0, 0, 0), '''
+Хардкор - після поразки
+доведеться починати всю
+гру заново
+ {0}
+'''.format(hard_record_str))
+                hardcore_back = Knopka(445, 5, 50, (255, 255, 255), ' Назад')
+                hardcore_play = Knopka(200, 340, 100, (55, 255, 55), '  Поїхали!')
+                while hardcore_b:
+                    window.fill(COLOR)
+                    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                    for ev in pygame.event.get():
+                        if ev.type == pygame.QUIT:
+                            pygame.quit()
+                    
+                    hardcore_i.f()
+                    hardcore_back.f()
+                    if hardcore_back.g():
+                        hardcore_b = False
+
+                    hardcore_play.f()
+                    if hardcore_play.g():
+                        hardcore_level = 1
+                        end_type = False
+                        r = COLOR[0]
+                        g = COLOR[1]
+                        b = COLOR[2]
+                        for _ in range(len(riwni1) - 1):
+                            if hard_game(riwni1[hardcore_level]):
+                                end_type = True
+                                break
+                            if hard_record_int < hardcore_level:
+                                hard_record_int = hardcore_level
+                            if hard_record_str != "\nТи пройшов всі \nрівні за одну спробу":
+                                hard_record_str = '\nРекорд: ' + str(hard_record_int)
+                            hardcore_level += 1
+                            COLOR = (r, g, b)
+                            if r < 220:
+                                r += 1
+                            if g > 110:
+                                g -= 1
+                            if b > 150:
+                                b -= 1
+                        if end_type:
+                            mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                            owwa = Info(10, 10, 70, (0, 0, 0), 'Нажаль \nу тебе не вийшло')
+                            save_progres()
+                            if mouse_pos[1] > 300:
+                                plak_y = 180
+                            else:
+                                plak_y = 320
+                            plak = Knopka(50, plak_y, 100, (255, 255, 255), '        :(')
+                            while True:
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                window.fill(COLOR)
+                                owwa.f()
+                                plak.f()
+                                for ev in pygame.event.get():
+                                    if ev.type == pygame.QUIT:
+                                        pygame.quit()
+
+                                if r > 150:
+                                    r -= 1
+                                if g < 150:
+                                    g += 1
+                                if b < 255:
+                                    b += 1
+                                COLOR = (r, g, b)
+
+                                if plak.g():
+                                    break
+
+                                update()
+                        else:
+                            save_progres()
+                            mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                            tak = Info(10, 10, 70, (0, 0, 0), 'Перемога!!! \nТи пройшов')
+                            if mouse_pos[1] > 300:
+                                yo_y = 180
+                            else:
+                                yo_y = 320
+                            yo = Knopka(50, yo_y, 100, (255, 255, 255), '        ;)')
+                            hard_record_str = "\nТи пройшов всі \nрівні за одну спробу"
+                            while True:
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                window.fill(COLOR)
+                                tak.f()
+                                yo.f()
+                                for ev in pygame.event.get():
+                                    if ev.type == pygame.QUIT:
+                                        pygame.quit()
+
+                                if r > 150:
+                                    r -= 1
+                                if g < 150:
+                                    g += 1
+                                if b < 255:
+                                    b += 1
+                                COLOR = (r, g, b)
+
+                                if yo.g():
+                                    break
+
+                                update()
+                        COLOR = (150, 150, 255)
+                        hardcore_i = Info(20, 65, 50, (0, 0, 0), '''
+Хардкор - після поразки
+доведеться починати всю
+гру заново
+ {0}
+'''.format(hard_record_str))
+
+                    update()
+            redactor.f()
+            if redactor.g():
+                redactor_b = True
+                redactor_i = Info(20, 65, 50, (0, 0, 0), '''
+Редактор - ти можеш
+створити свій рівень!
+''')
+                redactor_back = Knopka(445, 5, 50, (255, 255, 255), ' Назад')
+                redactor_create = Knopka(100, 380, 100, (255, 255, 255), '  Створити')
+                redactor_play = Knopka(300, 380, 100, (255, 255, 255), 'Грати')
+                while redactor_b:
+                    window.fill(COLOR)
+                    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                    for ev in pygame.event.get():
+                        if ev.type == pygame.QUIT:
+                            pygame.quit()
+
+                    redactor_create.f()
+                    if redactor_create.g():
+                        redactor_create_b = True
+                        redactor_create_go = Knopka(200, 80, 100, (255, 255, 255), ' Поїхали ')
+                        redactor_create_back = Knopka(5, 5, 50, (255, 255, 255), ' Назад')
+                        redactor_create_text = Info(10, 10, 50, (0, 0, 0), '''
+стіна - 1
+старт - 2
+фініш - 3
+
+будувати - ( <- та -> )
+відмінти - (LCTRL + Я)
+
+коли рівень побудовано
+натисни на - ESC                 
+''')
+                        while redactor_create_b:
+                            window.fill(COLOR)
+                            mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                            for ev in pygame.event.get():
+                                if ev.type == pygame.QUIT:
+                                    pygame.quit()
+
+                            redactor_create_text.f()
+
+                            redactor_create_back.f()
+                            if redactor_create_back.g():
+                                redactor_create_b = False
+                            
+                            redactor_create_go.f()
+                            if redactor_create_go.g():
+                                create_level()
+                                window.fill(COLOR)
+                                redactor_after_level = Knopka(200, 200, 100, (255, 255, 255), ' Cюди ')
+                                redactor_after_level.f()
+                                while True:
+                                    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                    for ev in pygame.event.get():
+                                        if ev.type == pygame.QUIT:
+                                            pygame.quit()
+                                    
+                                    if redactor_after_level.g():
+                                        break
+
+                                    update()    
+                                break
+                            update()
+
+
+                    if len(riwni2) > 1:
+                        redactor_play.f()
+                        if redactor_play.g():
+                            rp_ = redactor_play
+                            rp_while = True
+                            rp_size = 280
+                            rp_spacing = 10
+                            while rp_while:
+                                rp_level_n = 1
+                                rp_buttons = []
+                                rp_X = 20
+                                rp_Y = 70
+                                for _ in range(len(riwni2) - 1):
+                                    rp_buttons.append(Knopka(rp_X, rp_Y, rp_size, (255, 255, 255), (3 - len(str(rp_level_n))) * ' ' + str(rp_level_n)))
+                                    rp_level_n += 1
+                                    rp_X += rp_spacing
+                                    rp_X += rp_size
+                                    if rp_X + rp_size > 480:
+                                        rp_Y += rp_spacing
+                                        rp_Y += rp_size
+                                        if rp_Y + rp_size > 350:
+                                            rp_size -= 10
+                                            rp_level_n = -228
+                                            break
+                                        rp_X = 20
+
+                                rp_while = False
+                                if rp_level_n == -228:
+                                    rp_while = True
+                            rp_b = True
+                            rp_back = Knopka(5, 5, 50, (255, 255, 255), ' Назад')
+                            rp_text = Info(100, 10, 50, (0, 0, 0), 'Вибери рівень')
+                            while rp_b:
+                                window.fill(COLOR)
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                for ev in pygame.event.get():
+                                    if ev.type == pygame.QUIT:
+                                        pygame.quit()
+
+                                for rp_button in rp_buttons:
+                                    rp_button.f()
+                                    if rp_button.g():
+                                        if not game(riwni2[int(rp_button.text.replace(' ', ''))], True):
+                                            window.fill((150, 200, 200))
+                                        else:
+                                            window.fill((200, 150, 200))
+                                        rp_after_level = Knopka(200, 400, 80, (255, 255, 255), ' Cюди ')
+                                        rp_after_level.f()
+                                        while True:
+                                            mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                            for ev in pygame.event.get():
+                                                if ev.type == pygame.QUIT:
+                                                    pygame.quit()
+                                            
+                                            if rp_after_level.g():
+                                                break
+
+                                            update()
+
+                                rp_text.f()
+
+                                rp_back.f()
+                                if rp_back.g():
+                                    rp_b = False
+                                
+                                update()
+
+                    redactor_i.f()
+                    redactor_back.f()
+                    if redactor_back.g():
+                        redactor_b = False
+
+                    update()
+            random.f()
+            if random.g():
+                random_b = True
+                random_i = Info(20, 65, 50, (0, 0, 0), '''
+Випадковий режим - грай в 
+рівень вибраний навмання
+''')
+                random_back = Knopka(445, 5, 50, (255, 255, 255), ' Назад')
+                random_play = Knopka(200, 380, 100, (55, 255, 55), '  Поїхали!')
+                while random_b:
+                    window.fill(COLOR)
+                    mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                    for ev in pygame.event.get():
+                        if ev.type == pygame.QUIT:
+                            pygame.quit()
+                    
+                    random_i.f()
+                    random_back.f()
+                    if random_back.g():
+                        random_b = False
+
+                    random_play.f()
+                    if random_play.g():
+                        i = game(riwni1[randint(1, len(riwni1) - 1)], True)
+                        if not i:
+                            window.fill((150, 200, 200))
+                            random_after_level = Knopka(200, 200, 100, (255, 255, 255), ' Cюди ')
+                            random_after_level.f()
+                            while True:
+                                mouse_pos[0], mouse_pos[1] = pygame.mouse.get_pos()
+                                for ev in pygame.event.get():
+                                    if ev.type == pygame.QUIT:
+                                        pygame.quit()
+                                
+                                if random_after_level.g():
+                                    break
+
+                                update()    
+
+                    update()
+
+            back.f()
+            if back.g():
+                play_b = False
+
+
+            update()
+    update()
